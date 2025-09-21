@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: kitap_postgres
+    environment:
+      POSTGRES_DB: memin_db
+      POSTGRES_USER: memin
+      POSTGRES_PASSWORD: 1422
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - blog_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memin -d memin_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: kitap_api
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=memin
+      - DB_PASSWORD=1422
+      - DB_NAME=memin_db
+      - DB_SSLMODE=disable
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - blog_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  blog_network:
+    driver: bridge
